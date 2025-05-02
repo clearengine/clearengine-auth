@@ -1,1 +1,3 @@
-Flask\ngoogle-auth\ngoogle-auth-oauthlib
+Flask
+google-auth
+google-auth-oauthlib
