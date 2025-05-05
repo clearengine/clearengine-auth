@@ -11,7 +11,7 @@ app.secret_key = "replace-this-with-a-secret"
 CLIENT_SECRETS_FILE = "client_secrets.json"
 
 SCOPES = ["https://www.googleapis.com/auth/analytics.readonly"]
-REDIRECT_URI = "http://localhost:5000/oauth2callback"
+REDIRECT_URI = "https://clearengine-auth.onrender.com/oauth2callback"
 
 @app.route("/")
 def index():
