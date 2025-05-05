@@ -19,8 +19,9 @@ def index():
 
 @app.route("/login")
 def login():
-    flow = Flow.from_client_secrets_file(
-        CLIENT_SECRETS_FILE,
+    client_secrets = json.loads(os.environ["GOOGLE_CLIENT_SECRETS"])
+    flow = Flow.from_client_config(
+        client_secrets,
         scopes=SCOPES,
         redirect_uri=REDIRECT_URI
     )
@@ -34,8 +35,9 @@ def login():
 @app.route("/oauth2callback")
 def oauth2callback():
     state = session["state"]
-    flow = Flow.from_client_secrets_file(
-        CLIENT_SECRETS_FILE,
+    client_secrets = json.loads(os.environ["GOOGLE_CLIENT_SECRETS"])
+    flow = Flow.from_client_config(
+        client_secrets,
         scopes=SCOPES,
         redirect_uri=REDIRECT_URI
     )
