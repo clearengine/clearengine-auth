@@ -34,16 +34,19 @@ def login():
 
 @app.route("/oauth2callback")
 def oauth2callback():
-    state = session["state"]
     client_secrets = json.loads(os.environ["GOOGLE_CLIENT_SECRETS"])
     flow = Flow.from_client_config(
         client_secrets,
         scopes=SCOPES,
         redirect_uri=REDIRECT_URI
     )
+
+    # Rebuild the state from the session
     flow.fetch_token(authorization_response=request.url)
 
     credentials = flow.credentials
+
+    # ⚠️ You can store these in a secure DB or send to your analysis script
     token_data = {
         "token": credentials.token,
         "refresh_token": credentials.refresh_token,
@@ -53,10 +56,11 @@ def oauth2callback():
         "scopes": credentials.scopes
     }
 
-    with open("token.json", "w") as token_file:
-        json.dump(token_data, token_file)
+    # For now, just print to terminal and show confirmation
+    print("🔐 Credentials received:", token_data)
 
-    return "✅ Authorization successful. You can now pull GA4 data."
+    return "✅ Authorization complete. You can now close this window."
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
