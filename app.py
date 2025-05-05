@@ -5,6 +5,8 @@ import pathlib
 import json
 
 
+os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
+
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 
