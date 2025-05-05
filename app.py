@@ -63,10 +63,14 @@ def oauth2callback():
         "scopes": credentials.scopes
     }
 
-    # For now, just print to terminal and show confirmation
-    print("🔐 Credentials received:", token_data)
-
-    return "✅ Authorization complete. You can now close this window."
+    # Save credentials to session
+    session["token"] = credentials.token
+    session["refresh_token"] = credentials.refresh_token
+    session["token_uri"] = credentials.token_uri
+    session["client_id"] = credentials.client_id
+    session["client_secret"] = credentials.client_secret
+    
+    return redirect("/report")  # Optional: go straight to the report
 
 
 
@@ -81,11 +85,12 @@ def run_report():
     creds = Credentials(
         token=session.get("token"),
         refresh_token=session.get("refresh_token"),
-        token_uri=client_secrets["web"]["token_uri"],
-        client_id=client_secrets["web"]["client_id"],
-        client_secret=client_secrets["web"]["client_secret"],
+        token_uri=session.get("token_uri"),
+        client_id=session.get("client_id"),
+        client_secret=session.get("client_secret"),
         scopes=SCOPES
     )
+
 
     property_id = "351926152"  # Replace with dynamic ID later
 
