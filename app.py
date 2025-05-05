@@ -72,3 +72,52 @@ def oauth2callback():
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
 
+
+from google.analytics.data_v1beta import BetaAnalyticsDataClient
+from google.analytics.data_v1beta.types import DateRange, Dimension, Metric, RunReportRequest
+from google.oauth2.credentials import Credentials
+
+@app.route("/report")
+def run_report():
+    # Load saved credentials (from session, DB, or for now, assume in memory)
+    client_secrets = json.loads(os.environ["GOOGLE_CLIENT_SECRETS"])
+    creds = Credentials(
+        token=session.get("token"),
+        refresh_token=session.get("refresh_token"),
+        token_uri=client_secrets["web"]["token_uri"],
+        client_id=client_secrets["web"]["client_id"],
+        client_secret=client_secrets["web"]["client_secret"],
+        scopes=SCOPES
+    )
+
+    property_id = "351926152"  # Replace with dynamic ID later
+
+    client = BetaAnalyticsDataClient(credentials=creds)
+
+    request = RunReportRequest(
+        property=f"properties/{property_id}",
+        date_ranges=[DateRange(start_date="2023-01-01", end_date="today")],
+        dimensions=[
+            Dimension(name="month"),
+            Dimension(name="sourceMedium"),
+        ],
+        metrics=[
+            Metric(name="sessions"),
+            Metric(name="engagedSessions"),
+            Metric(name="eventCount"),
+            Metric(name="keyEvents"),
+            Metric(name="totalRevenue"),
+            Metric(name="purchaseRevenue"),
+            Metric(name="purchases"),
+        ]
+    )
+
+    response = client.run_report(request)
+    output = []
+
+    for row in response.rows:
+        output.append({header.name: value.string_value for header, value in zip(response.dimension_headers + response.metric_headers, row.dimension_values + row.metric_values)})
+
+    return {"report": output}
+
+
