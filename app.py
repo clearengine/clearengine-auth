@@ -122,7 +122,7 @@ def run_report():
         metric_values = list(row.metric_values)
         
         output.append({
-            header.name: value.string_value
+            header.name: value.value
             for header, value in zip(dimension_headers + metric_headers, dimension_values + metric_values)
         })
 
