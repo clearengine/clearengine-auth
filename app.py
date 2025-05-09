@@ -110,7 +110,7 @@ def run_report():
             Metric(name="keyEvents"),
             Metric(name="totalRevenue"),
             Metric(name="purchaseRevenue"),
-            Metric(name="purchases"),
+            Metric(name="transactions"),
         ]
     )
 
