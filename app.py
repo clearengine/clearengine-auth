@@ -116,7 +116,16 @@ def run_report():
     output = []
 
     for row in response.rows:
-        output.append({header.name: value.string_value for header, value in zip(response.dimension_headers + response.metric_headers, row.dimension_values + row.metric_values)})
+        dimension_headers = list(response.dimension_headers)
+        metric_headers = list(response.metric_headers)
+        dimension_values = list(row.dimension_values)
+        metric_values = list(row.metric_values)
+        
+        output.append({
+            header.name: value.string_value
+            for header, value in zip(dimension_headers + metric_headers, dimension_values + metric_values)
+        })
+
 
     return {"report": output}
 
