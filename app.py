@@ -106,11 +106,9 @@ def run_report():
         metrics=[
             Metric(name="sessions"),
             Metric(name="engagedSessions"),
-            Metric(name="eventCount"),
-            Metric(name="keyEvents"),
             Metric(name="totalRevenue"),
             Metric(name="purchaseRevenue"),
-            Metric(name="transactions"),
+            Metric(name="grossPurchaseRevenue"),
         ]
     )
 
