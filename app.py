@@ -24,6 +24,12 @@ REDIRECT_URI = "https://clearengine-auth.onrender.com/oauth2callback"
 def index():
     return render_template("index.html")
 
+@app.route("/set_client", methods=["POST"])
+def set_client():
+    session["client_name"] = request.form["client_name"]
+    return redirect("/login")
+
+
 @app.route("/login")
 def login():
     client_secrets = json.loads(os.environ["GOOGLE_CLIENT_SECRETS"])
@@ -126,6 +132,14 @@ def run_report():
             for header, value in zip(dimension_headers + metric_headers, dimension_values + metric_values)
         })
 
+    # Save report as JSON file
+    client_name = session.get("client_name", "unknown_client")
+    date_str = datetime.today().strftime("%Y-%m-%d")
+    folder_path = f"data/{client_name}"
+    os.makedirs(folder_path, exist_ok=True)
+    
+    with open(f"{folder_path}/ga4-report-{date_str}.json", "w") as f:
+        json.dump({"report": output}, f, indent=2)
 
     return {"report": output}
 
