@@ -80,7 +80,7 @@ def upload_to_drive(filepath, filename):
 
     file_metadata = {
         "name": filename,
-        "parents": ["1SY6n4AM8fz9KwoPOijfw1rbS7hLNInCI"]  # Upload to specific folder
+        "parents": ["1h6bos8GzEYi-ZcUl76te4ACfrVGe7r4b"]  # Upload to specific folder
     }
     media = MediaFileUpload(filepath, resumable=True)
 
