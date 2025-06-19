@@ -150,3 +150,12 @@ def run_report():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
+
+
+
+@app.route("/download_drive_credentials")
+def download_drive_credentials():
+    try:
+        return app.send_static_file("drive_credentials.json")
+    except Exception as e:
+        return str(e), 500
