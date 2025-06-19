@@ -10,24 +10,24 @@ app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 app.secret_key = "replace-this-with-a-secret"
 
-# OAuth client secrets (stored in env variable as JSON string)
-CLIENT_SECRETS_FILE = "client_secrets.json"
-
+# OAuth client secrets (loaded from environment variable)
 SCOPES = [
     "https://www.googleapis.com/auth/analytics.readonly",
-    "https://www.googleapis.com/auth/drive.file"  # For Drive upload
+    "https://www.googleapis.com/auth/drive.file"
 ]
-REDIRECT_URI = "https://clearengine-auth.onrender.com/oauth2callback"  # Your deployed callback URI
+REDIRECT_URI = "https://clearengine-auth.onrender.com/oauth2callback"
 
 
 @app.route("/")
 def index():
     return render_template("index.html")
 
+
 @app.route("/set_client", methods=["POST"])
 def set_client():
     session["client_name"] = request.form["client_name"]
     return redirect("/login")
+
 
 @app.route("/login")
 def login():
@@ -46,41 +46,26 @@ def login():
     return redirect(authorization_url)
 
 
-# 🔐 One-time route just for you to authorize Google Drive
+# ✅ One-time route for Drive setup
 @app.route("/authorize_drive")
 def authorize_drive():
-    client_secrets = json.loads(os.environ["GOOGLE_CLIENT_SECRETS"])
-    flow = Flow.from_client_config(
-        client_secrets,
-        scopes=SCOPES,
-        redirect_uri=REDIRECT_URI + "?drive_setup=true"
-    )
-    authorization_url, state = flow.authorization_url(
-        access_type="offline",
-        include_granted_scopes="true",
-        prompt="consent"
-    )
-    session["state"] = state
-    return redirect(authorization_url)
+    session["drive_setup"] = True  # Use session instead of URI param
+    return redirect("/login")
 
 
 @app.route("/oauth2callback")
 def oauth2callback():
     client_secrets = json.loads(os.environ["GOOGLE_CLIENT_SECRETS"])
-    redirect_uri = REDIRECT_URI
-    if "drive_setup" in request.url:
-        redirect_uri += "?drive_setup=true"
-
     flow = Flow.from_client_config(
         client_secrets,
         scopes=SCOPES,
-        redirect_uri=redirect_uri
+        redirect_uri=REDIRECT_URI
     )
     flow.fetch_token(authorization_response=request.url)
     credentials = flow.credentials
 
-    if "drive_setup" in request.url:
-        # Save your Drive credentials to a local file
+    if session.get("drive_setup"):
+        # ✅ Save Drive credentials permanently
         with open("drive_credentials.json", "w") as f:
             json.dump({
                 "token": credentials.token,
@@ -90,9 +75,10 @@ def oauth2callback():
                 "client_secret": credentials.client_secret,
                 "scopes": credentials.scopes
             }, f)
+        session.pop("drive_setup", None)
         return "✅ Drive access authorized and saved to drive_credentials.json"
 
-    # Normal user session handling (GA flow)
+    # Normal GA flow
     session["token"] = credentials.token
     session["refresh_token"] = credentials.refresh_token
     session["token_uri"] = credentials.token_uri
@@ -101,3 +87,66 @@ def oauth2callback():
 
     return redirect("/report")
 
+
+from google.analytics.data_v1beta import BetaAnalyticsDataClient
+from google.analytics.data_v1beta.types import DateRange, Dimension, Metric, RunReportRequest
+from google.oauth2.credentials import Credentials
+
+
+@app.route("/report")
+def run_report():
+    creds = Credentials(
+        token=session.get("token"),
+        refresh_token=session.get("refresh_token"),
+        token_uri=session.get("token_uri"),
+        client_id=session.get("client_id"),
+        client_secret=session.get("client_secret"),
+        scopes=SCOPES
+    )
+
+    property_id = "351926152"  # Replace with dynamic ID later
+    client = BetaAnalyticsDataClient(credentials=creds)
+
+    request = RunReportRequest(
+        property=f"properties/{property_id}",
+        date_ranges=[DateRange(start_date="2023-01-01", end_date="today")],
+        dimensions=[
+            Dimension(name="month"),
+            Dimension(name="sourceMedium"),
+        ],
+        metrics=[
+            Metric(name="sessions"),
+            Metric(name="engagedSessions"),
+            Metric(name="totalRevenue"),
+            Metric(name="purchaseRevenue"),
+            Metric(name="grossPurchaseRevenue"),
+        ]
+    )
+
+    response = client.run_report(request)
+    output = []
+
+    for row in response.rows:
+        dimension_headers = list(response.dimension_headers)
+        metric_headers = list(response.metric_headers)
+        dimension_values = list(row.dimension_values)
+        metric_values = list(row.metric_values)
+
+        output.append({
+            header.name: value.value
+            for header, value in zip(dimension_headers + metric_headers, dimension_values + metric_values)
+        })
+
+    client_name = session.get("client_name", "unknown_client")
+    date_str = datetime.today().strftime("%Y-%m-%d")
+    folder_path = f"data/{client_name}"
+    os.makedirs(folder_path, exist_ok=True)
+
+    with open(f"{folder_path}/ga4-report-{date_str}.json", "w") as f:
+        json.dump({"report": output}, f, indent=2)
+
+    return {"report": output}
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
