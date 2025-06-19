@@ -10,7 +10,6 @@ app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 app.secret_key = "replace-this-with-a-secret"
 
-# OAuth client secrets (loaded from environment variable)
 SCOPES = [
     "https://www.googleapis.com/auth/analytics.readonly",
     "https://www.googleapis.com/auth/drive.file"
@@ -46,10 +45,9 @@ def login():
     return redirect(authorization_url)
 
 
-# ✅ One-time route for Drive setup
 @app.route("/authorize_drive")
 def authorize_drive():
-    session["drive_setup"] = True  # Use session instead of URI param
+    session["drive_setup"] = True
     return redirect("/login")
 
 
@@ -66,17 +64,18 @@ def oauth2callback():
 
     if session.get("drive_setup"):
         session.pop("drive_setup", None)
-        return f"<pre>{json.dumps({
-            'token': credentials.token,
-            'refresh_token': credentials.refresh_token,
-            'token_uri': credentials.token_uri,
-            'client_id': credentials.client_id,
-            'client_secret': credentials.client_secret,
-            'scopes': credentials.scopes
-        }, indent=2)}</pre>"
 
+        token_data = {
+            "token": credentials.token,
+            "refresh_token": credentials.refresh_token,
+            "token_uri": credentials.token_uri,
+            "client_id": credentials.client_id,
+            "client_secret": credentials.client_secret,
+            "scopes": credentials.scopes
+        }
 
-    # Normal GA flow
+        return "<pre>" + json.dumps(token_data, indent=2) + "</pre>"
+
     session["token"] = credentials.token
     session["refresh_token"] = credentials.refresh_token
     session["token_uri"] = credentials.token_uri
