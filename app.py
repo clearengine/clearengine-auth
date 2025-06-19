@@ -65,8 +65,7 @@ def oauth2callback():
     return redirect("/report")
 
 def upload_to_drive(filepath, filename):
-    with open("drive_credentials.json", "r") as f:
-        token_data = json.load(f)
+    token_data = json.loads(os.environ["DRIVE_CREDENTIALS"])
 
     creds = Credentials(
         token=token_data["token"],
