@@ -65,18 +65,16 @@ def oauth2callback():
     credentials = flow.credentials
 
     if session.get("drive_setup"):
-        # ✅ Save Drive credentials permanently
-        with open("drive_credentials.json", "w") as f:
-            json.dump({
-                "token": credentials.token,
-                "refresh_token": credentials.refresh_token,
-                "token_uri": credentials.token_uri,
-                "client_id": credentials.client_id,
-                "client_secret": credentials.client_secret,
-                "scopes": credentials.scopes
-            }, f)
         session.pop("drive_setup", None)
-        return "✅ Drive access authorized and saved to drive_credentials.json"
+        return f"<pre>{json.dumps({
+            'token': credentials.token,
+            'refresh_token': credentials.refresh_token,
+            'token_uri': credentials.token_uri,
+            'client_id': credentials.client_id,
+            'client_secret': credentials.client_secret,
+            'scopes': credentials.scopes
+        }, indent=2)}</pre>"
+
 
     # Normal GA flow
     session["token"] = credentials.token
@@ -150,12 +148,3 @@ def run_report():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
-
-
-
-@app.route("/download_drive_credentials")
-def download_drive_credentials():
-    try:
-        return app.send_static_file("drive_credentials.json")
-    except Exception as e:
-        return str(e), 500
