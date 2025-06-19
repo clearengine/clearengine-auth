@@ -2,9 +2,13 @@ from flask import Flask, redirect, request, session, url_for, render_template
 from google_auth_oauthlib.flow import Flow
 from datetime import datetime
 import os
-import pathlib
 import json
 from werkzeug.middleware.proxy_fix import ProxyFix
+from google.oauth2.credentials import Credentials
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaFileUpload
+from google.analytics.data_v1beta import BetaAnalyticsDataClient
+from google.analytics.data_v1beta.types import DateRange, Dimension, Metric, RunReportRequest
 
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
@@ -16,17 +20,14 @@ SCOPES = [
 ]
 REDIRECT_URI = "https://clearengine-auth.onrender.com/oauth2callback"
 
-
 @app.route("/")
 def index():
     return render_template("index.html")
-
 
 @app.route("/set_client", methods=["POST"])
 def set_client():
     session["client_name"] = request.form["client_name"]
     return redirect("/login")
-
 
 @app.route("/login")
 def login():
@@ -44,13 +45,6 @@ def login():
     session["state"] = state
     return redirect(authorization_url)
 
-
-@app.route("/authorize_drive")
-def authorize_drive():
-    session["drive_setup"] = True
-    return redirect("/login")
-
-
 @app.route("/oauth2callback")
 def oauth2callback():
     client_secrets = json.loads(os.environ["GOOGLE_CLIENT_SECRETS"])
@@ -62,20 +56,6 @@ def oauth2callback():
     flow.fetch_token(authorization_response=request.url)
     credentials = flow.credentials
 
-    if session.get("drive_setup"):
-        session.pop("drive_setup", None)
-
-        token_data = {
-            "token": credentials.token,
-            "refresh_token": credentials.refresh_token,
-            "token_uri": credentials.token_uri,
-            "client_id": credentials.client_id,
-            "client_secret": credentials.client_secret,
-            "scopes": credentials.scopes
-        }
-
-        return "<pre>" + json.dumps(token_data, indent=2) + "</pre>"
-
     session["token"] = credentials.token
     session["refresh_token"] = credentials.refresh_token
     session["token_uri"] = credentials.token_uri
@@ -84,11 +64,34 @@ def oauth2callback():
 
     return redirect("/report")
 
+def upload_to_drive(filepath, filename):
+    with open("drive_credentials.json", "r") as f:
+        token_data = json.load(f)
 
-from google.analytics.data_v1beta import BetaAnalyticsDataClient
-from google.analytics.data_v1beta.types import DateRange, Dimension, Metric, RunReportRequest
-from google.oauth2.credentials import Credentials
+    creds = Credentials(
+        token=token_data["token"],
+        refresh_token=token_data["refresh_token"],
+        token_uri=token_data["token_uri"],
+        client_id=token_data["client_id"],
+        client_secret=token_data["client_secret"],
+        scopes=token_data["scopes"]
+    )
 
+    service = build("drive", "v3", credentials=creds)
+
+    file_metadata = {
+        "name": filename,
+        "parents": ["1SY6n4AM8fz9KwoPOijfw1rbS7hLNInCI"]  # Upload to specific folder
+    }
+    media = MediaFileUpload(filepath, resumable=True)
+
+    uploaded_file = service.files().create(
+        body=file_metadata,
+        media_body=media,
+        fields="id"
+    ).execute()
+
+    return uploaded_file.get("id")
 
 @app.route("/report")
 def run_report():
@@ -101,7 +104,7 @@ def run_report():
         scopes=SCOPES
     )
 
-    property_id = "351926152"  # Replace with dynamic ID later
+    property_id = "351926152"
     client = BetaAnalyticsDataClient(credentials=creds)
 
     request = RunReportRequest(
@@ -139,11 +142,13 @@ def run_report():
     folder_path = f"data/{client_name}"
     os.makedirs(folder_path, exist_ok=True)
 
-    with open(f"{folder_path}/ga4-report-{date_str}.json", "w") as f:
+    report_path = f"{folder_path}/ga4-report-{date_str}.json"
+    with open(report_path, "w") as f:
         json.dump({"report": output}, f, indent=2)
 
-    return {"report": output}
+    uploaded_id = upload_to_drive(report_path, f"ga4-report-{date_str}.json")
 
+    return {"report_uploaded_to_drive_id": uploaded_id, "report": output}
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
