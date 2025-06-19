@@ -30,8 +30,13 @@ Flask==3.1.0
 frozendict @ file:///croot/frozendict_1713194832637/work
 gitdb @ file:///tmp/build/80754af9/gitdb_1617117951232/work
 GitPython @ file:///croot/gitpython_1720455034730/work
+google-analytics-data==0.18.19
+google-api-core==2.25.1
 google-auth==2.39.0
 google-auth-oauthlib==1.2.2
+googleapis-common-protos==1.70.0
+grpcio==1.73.0
+grpcio-status==1.73.0
 gunicorn==23.0.0
 html5lib @ file:///Users/ktietz/demo/mc3/conda-bld/html5lib_1629144453894/work
 idna @ file:///tmp/build/80754af9/idna_1637925883363/work
@@ -54,6 +59,8 @@ pastel @ file:///tmp/build/80754af9/pastel_1600457269988/work
 pkginfo @ file:///croot/pkginfo_1731939382641/work
 platformdirs @ file:///croot/platformdirs_1692205439124/work
 pluggy @ file:///croot/pluggy_1733169602837/work
+proto-plus==1.26.1
+protobuf==6.31.1
 pyasn1==0.6.1
 pyasn1_modules==0.4.2
 pycosat==0.6.3
